@@ -1,6 +1,7 @@
+from tkinter import EXCEPTION
 import requests, base64
-import json, time
-import os,sys
+import json
+import sys
 from prettytable import PrettyTable
 requests.packages.urllib3.disable_warnings()
 
@@ -57,8 +58,6 @@ def jobstat(job_status, headers, storage):
     "check job status"
     t = PrettyTable()
 
-    # print(job_status)
-
     job_status_url = "https://{}/api/cluster/jobs/{}".format(
         storage, job_status['job']['uuid'])
     try:
@@ -80,8 +79,7 @@ def jobstat(job_status, headers, storage):
 
         
     job_status = job_response.json()
-    # print(job_status_url)
-    # print(job_status)
+
     if job_status['state'] == 'failure':
         t.field_names = [
                 'UUID',
@@ -229,3 +227,16 @@ def check_snapshot(storage, svm, vol, snap_name):
         return 1
     else:
         return 0
+
+def get_size(size):
+    try:
+        tmp = int(size) * 1024 * 1024
+        if tmp < 20971520:
+            print('Size "10MB" ("10485760B") is too small.  Minimum size is "20MB" ("20971520B").')
+            sys.exit(0)
+        return tmp
+    except ValueError:
+        print('ERROR! size should be Integer only')
+    except Exception as err:
+        print(err)
+    

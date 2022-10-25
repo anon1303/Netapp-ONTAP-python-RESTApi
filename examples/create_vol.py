@@ -145,9 +145,9 @@ def main(args):
 	storage = args['<STORAGE>']
 	vm = args['<SVM>']
 	vol_name = args['<VOLUME>']
-	size = args['<SIZE>']
-
-
+	tmpsize = args['<SIZE>']
+	
+	size = get_size(tmpsize)
 	create_vol(storage, vm, vol_name, size)
 
 
