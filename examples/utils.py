@@ -1,6 +1,6 @@
 from tkinter import EXCEPTION
 import requests, base64
-import json
+import json,time
 import sys
 from prettytable import PrettyTable
 requests.packages.urllib3.disable_warnings()
@@ -240,3 +240,125 @@ def get_size(size):
     except Exception as err:
         print(err)
     
+def get_svmUUID(svm, storage):
+    url = 'https://'+storage
+    headers = Headers()
+
+    try:
+        r = requests.get(url+'/api/svm/svms?name='+svm,
+                            verify=False, headers = headers)
+
+    
+    except requests.exceptions.ConnectionError as err:
+        print(err)
+        print('Cant connect to the storage!')
+        sys.exit(1)
+
+    except IndexError as err:
+        print(err)
+        print('SVM not found!')
+        sys.exit(1)
+
+    except json.decoder.JSONDecodeError as err:
+        print(err)
+        print('Cant connect to the storage!')
+        sys.exit(1)
+
+    except requests.exceptions.HTTPError as err:
+        print(err)
+        print('Cant connect to the storage!')
+        sys.exit(1)
+
+    except requests.exceptions.RequestException as err:
+        print(err)
+        print('Cant connect to the storage!')
+        sys.exit(1)
+    except Exception as err:
+        print(err)
+        sys.exit(1)
+
+    svmdict = dict(r.json())
+
+    if svmdict['num_records'] == 0 or len(svmdict['records']) == 0:
+        print('No record Found for the svm named: ',svm)
+        sys.exit(0)
+    svmuuid = svmdict['records'][0]['uuid']
+
+    return svmuuid
+
+
+def check_svm(svm, storage):
+
+    url = 'https://'+storage
+    headers = Headers()
+
+    vm_name = {}
+    try:
+        r = requests.get(url+'/api/svm/svms',
+                            verify=False, headers = headers)
+        data = r.json()
+        vm_name.update(data)
+
+        vm=[]
+
+        for i in vm_name['records']:
+            vm.append(i['name'])
+
+        if svm in vm:
+            message = {
+                'message': 'The VM named '+svm+' is already running!',
+                'code': 0 
+            }
+            return message
+
+        else:
+            message = {
+                'message': svm+' Not found in the storage',
+                'code': 1 
+            }
+            return message
+
+    except requests.exceptions.ConnectionError as err:
+        print('Cant connect to the storage!')
+        sys.exit(1)
+
+    except json.decoder.JSONDecodeError as err:
+        print('Cant connect to the storage!')
+        sys.exit(1)
+
+    except requests.exceptions.HTTPError as err:
+        print('Cant connect to the storage!')
+        sys.exit(1)
+
+    except requests.exceptions.RequestException as err:
+        print('Cant connect to the storage!')
+        sys.exit(1)
+        
+    except Exception as err:
+        print(err)
+        sys.exit(1)
+
+def jobstat_(job_status, headers, storage):
+    "check job status"
+    if job_status['state'] == "failure":
+        if job_status['code'] == 460770:
+            print("SVM Already Exists")
+        else:
+            print("Operation failed due to :{}".format(job_status['message']))
+    elif job_status['state'] == "success":
+        print("Operation completed successfully.")
+    else:
+        job_status_url = "https://{}/api/cluster/jobs/{}".format(
+            storage, job_status['uuid'])
+        try:
+            job_response = requests.get(
+                job_status_url, headers=headers, verify=False)
+        except requests.exceptions.HTTPError as err:
+            print(err)
+            sys.exit(1)
+        except requests.exceptions.RequestException as err:
+            print(err)
+            sys.exit(1)
+        job_status = job_response.json()
+        time.sleep(2)
+        jobstat_(job_status, headers, storage)
